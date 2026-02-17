@@ -7,15 +7,26 @@ from app.config import settings
 
 bearer_scheme = HTTPBearer()
 
-# JWKS client — fetches public keys from Supabase and caches them.
-# On key rotation the kid will change; PyJWKClient automatically
-# re-fetches JWKS when it encounters an unknown kid.
-_jwks_client = PyJWKClient(
-    f"{settings.supabase_url}/auth/v1/.well-known/jwks.json",
-    cache_keys=True,
-    lifespan=3600,  # re-fetch keys at most once per hour
-    headers={"apikey": settings.supabase_key},
-)
+_jwks_client: PyJWKClient | None = None
+
+
+def _get_jwks_client() -> PyJWKClient:
+    """Lazy init so health check can run without JWKS configured."""
+    global _jwks_client
+    if _jwks_client is None:
+        url = settings.jwks_url
+        if not url:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="JWKS URL not configured (set SUPABASE_URL or SUPABASE_JWKS_URL)",
+            )
+        _jwks_client = PyJWKClient(
+            url,
+            cache_keys=True,
+            lifespan=3600,
+            headers={"apikey": settings.service_role_key} if settings.service_role_key else None,
+        )
+    return _jwks_client
 
 
 class CurrentUser:
@@ -40,13 +51,12 @@ async def get_current_user(
     token = credentials.credentials
 
     try:
-        signing_key = _jwks_client.get_signing_key_from_jwt(token)
-        payload = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["ES256"],
-            audience="authenticated",
-        )
+        client = _get_jwks_client()
+        signing_key = client.get_signing_key_from_jwt(token)
+        decode_options: dict = {"algorithms": ["ES256"], "audience": settings.jwt_audience}
+        if settings.jwt_issuer:
+            decode_options["issuer"] = settings.jwt_issuer
+        payload = jwt.decode(token, signing_key.key, **decode_options)
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -57,6 +67,8 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token: {exc}",
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

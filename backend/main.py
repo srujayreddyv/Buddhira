@@ -72,7 +72,7 @@ async def health():
     """
     version = os.environ.get("APP_VERSION") or app.version
 
-    supabase_ok = bool(settings.supabase_url and settings.supabase_key)
+    supabase_ok = bool(settings.supabase_url and settings.service_role_key)
     if not supabase_ok:
         return JSONResponse(
             status_code=500,

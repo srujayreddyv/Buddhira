@@ -141,9 +141,25 @@ async def list_items(
 
 # ── Get single item ─────────────────────────────────────────────────────────
 
+def _ensure_item_owned(sb, item_id: str, user_id: str) -> None:
+    """Raise 404 if item does not exist, 403 if it belongs to another user."""
+    row = sb.table("items").select("id, user_id").eq("id", item_id).execute()
+    if not row.data or len(row.data) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item not found",
+        )
+    if row.data[0]["user_id"] != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this item",
+        )
+
+
 @router.get("/{item_id}")
 async def get_item(item_id: str, user: CurrentUser = Depends(get_current_user)):
     sb = get_supabase()
+    _ensure_item_owned(sb, item_id, user.id)
     response = (
         sb.table("items")
         .select("*, item_tags(tag_id, tags(id, name))")
@@ -152,8 +168,6 @@ async def get_item(item_id: str, user: CurrentUser = Depends(get_current_user)):
         .single()
         .execute()
     )
-    if not response.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
     return response.data
 
 
@@ -184,6 +198,7 @@ async def create_item(body: ItemCreate, user: CurrentUser = Depends(get_current_
 @router.patch("/{item_id}")
 async def update_item(item_id: str, body: ItemUpdate, user: CurrentUser = Depends(get_current_user)):
     sb = get_supabase()
+    _ensure_item_owned(sb, item_id, user.id)
     updates = body.model_dump(exclude_none=True)
     if not updates:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields to update")
@@ -192,8 +207,6 @@ async def update_item(item_id: str, body: ItemUpdate, user: CurrentUser = Depend
     updates = enforce_archive_rules(updates)
 
     response = sb.table("items").update(updates).eq("id", item_id).eq("user_id", user.id).execute()
-    if not response.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
     return response.data[0]
 
 
@@ -202,6 +215,5 @@ async def update_item(item_id: str, body: ItemUpdate, user: CurrentUser = Depend
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_item(item_id: str, user: CurrentUser = Depends(get_current_user)):
     sb = get_supabase()
-    response = sb.table("items").delete().eq("id", item_id).eq("user_id", user.id).execute()
-    if not response.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+    _ensure_item_owned(sb, item_id, user.id)
+    sb.table("items").delete().eq("id", item_id).eq("user_id", user.id).execute()

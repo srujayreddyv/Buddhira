@@ -20,7 +20,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 user_id = sys.argv[1]
-sb = create_client(settings.supabase_url, settings.supabase_key)
+sb = create_client(settings.supabase_url, settings.service_role_key)
 
 # ── Tags ────────────────────────────────────────────────────────────────────
 

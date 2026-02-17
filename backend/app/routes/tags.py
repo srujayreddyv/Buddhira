@@ -68,11 +68,26 @@ async def create_tag(body: TagCreate, user: CurrentUser = Depends(get_current_us
     return response.data[0]
 
 
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+def _ensure_tag_owned(sb, tag_id: str, user_id: str) -> None:
+    """Raise 404 if tag does not exist, 403 if it belongs to another user."""
+    row = sb.table("tags").select("id, user_id").eq("id", tag_id).execute()
+    if not row.data or len(row.data) == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+    if row.data[0]["user_id"] != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this tag",
+        )
+
+
 # ── Update tag ──────────────────────────────────────────────────────────────
 
 @router.patch("/{tag_id}")
 async def update_tag(tag_id: str, body: TagUpdate, user: CurrentUser = Depends(get_current_user)):
     sb = get_supabase()
+    _ensure_tag_owned(sb, tag_id, user.id)
     response = (
         sb.table("tags")
         .update({"name": body.name})
@@ -80,8 +95,6 @@ async def update_tag(tag_id: str, body: TagUpdate, user: CurrentUser = Depends(g
         .eq("user_id", user.id)
         .execute()
     )
-    if not response.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
     return response.data[0]
 
 
@@ -90,12 +103,5 @@ async def update_tag(tag_id: str, body: TagUpdate, user: CurrentUser = Depends(g
 @router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_tag(tag_id: str, user: CurrentUser = Depends(get_current_user)):
     sb = get_supabase()
-    response = (
-        sb.table("tags")
-        .delete()
-        .eq("id", tag_id)
-        .eq("user_id", user.id)
-        .execute()
-    )
-    if not response.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+    _ensure_tag_owned(sb, tag_id, user.id)
+    sb.table("tags").delete().eq("id", tag_id).eq("user_id", user.id).execute()

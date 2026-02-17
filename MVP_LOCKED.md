@@ -71,3 +71,5 @@ When in doubt: if it’s not “capture a note/link/snippet and find it instantl
 | **Auth and user isolation** | ✅ JWT via JWKS; all queries `.eq("user_id", user.id)` | ✅ Sign up, login, forgot-password, reset-password; 401 → sign out + redirect | ✅ Done |
 
 **All MVP tasks are complete.** The app delivers: capture (note/link/snippet), find (search + filters + tags), and organize (states, pin, archive) with full user isolation.
+
+For setup, API reference, and deployment, see [README.md](README.md).

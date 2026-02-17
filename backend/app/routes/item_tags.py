@@ -2,7 +2,7 @@
 Item ↔ Tag associations.
 
 Attach and detach tags from items. Both the item and tag must belong
-to the authenticated user.
+to the authenticated user. Returns 403 when resource exists but belongs to another user.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,6 +14,18 @@ from app.supabase_client import get_supabase
 router = APIRouter()
 
 
+def _ensure_resource_owned(sb, table: str, resource_id: str, user_id: str, name: str) -> None:
+    """Raise 404 if resource does not exist, 403 if it belongs to another user."""
+    row = sb.table(table).select("id, user_id").eq("id", resource_id).execute()
+    if not row.data or len(row.data) == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{name} not found")
+    if row.data[0]["user_id"] != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"You do not have access to this {name.lower()}",
+        )
+
+
 class ItemTagBody(BaseModel):
     tag_id: str
 
@@ -23,11 +35,7 @@ class ItemTagBody(BaseModel):
 @router.get("/{item_id}/tags")
 async def list_item_tags(item_id: str, user: CurrentUser = Depends(get_current_user)):
     sb = get_supabase()
-
-    # Verify the item belongs to the user
-    item = sb.table("items").select("id").eq("id", item_id).eq("user_id", user.id).single().execute()
-    if not item.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+    _ensure_resource_owned(sb, "items", item_id, user.id, "Item")
 
     response = (
         sb.table("item_tags")
@@ -47,15 +55,8 @@ async def add_tag_to_item(
     user: CurrentUser = Depends(get_current_user),
 ):
     sb = get_supabase()
-
-    # Verify both item and tag belong to the user
-    item = sb.table("items").select("id").eq("id", item_id).eq("user_id", user.id).single().execute()
-    if not item.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
-
-    tag = sb.table("tags").select("id").eq("id", body.tag_id).eq("user_id", user.id).single().execute()
-    if not tag.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+    _ensure_resource_owned(sb, "items", item_id, user.id, "Item")
+    _ensure_resource_owned(sb, "tags", body.tag_id, user.id, "Tag")
 
     response = (
         sb.table("item_tags")
@@ -74,11 +75,7 @@ async def remove_tag_from_item(
     user: CurrentUser = Depends(get_current_user),
 ):
     sb = get_supabase()
-
-    # Verify the item belongs to the user
-    item = sb.table("items").select("id").eq("id", item_id).eq("user_id", user.id).single().execute()
-    if not item.data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+    _ensure_resource_owned(sb, "items", item_id, user.id, "Item")
 
     response = (
         sb.table("item_tags")

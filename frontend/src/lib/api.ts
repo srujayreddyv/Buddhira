@@ -1,6 +1,10 @@
 import { supabase } from "./supabaseClient";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// No hardcoded URLs — set NEXT_PUBLIC_API_BASE_URL (or NEXT_PUBLIC_API_URL) in .env.local
+const API_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "";
 
 export function getApiBaseUrl(): string {
   return API_URL;
@@ -12,7 +16,7 @@ const API_TIMEOUT_MS = 20_000;
 const RETRY_DELAY_MS = 2_500;
 
 /** Event dispatched before retrying a GET after timeout — listener can show "Backend waking up, retrying…" */
-export const BACKEND_RETRY_EVENT = "mindcache:backend-retry";
+export const BACKEND_RETRY_EVENT = "buddhira:backend-retry";
 
 /**
  * API error shape from backend (single format for all errors).

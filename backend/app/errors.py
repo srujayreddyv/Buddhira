@@ -39,11 +39,31 @@ def error_response(status_code: int, detail: str, code: str | None = None) -> JS
     return JSONResponse(status_code=status_code, content=body)
 
 
+def _code_for_status(status_code: int, exc: Exception) -> str | None:
+    """Default API error codes for consistent debugging."""
+    explicit = getattr(exc, "code", None)
+    if explicit:
+        return explicit
+    if status_code == status.HTTP_401_UNAUTHORIZED:
+        return "unauthenticated"
+    if status_code == status.HTTP_403_FORBIDDEN:
+        return "forbidden"
+    if status_code == status.HTTP_404_NOT_FOUND:
+        return "not_found"
+    if status_code == 429:
+        return "rate_limited"
+    return None
+
+
 async def http_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Handle FastAPI HTTPException."""
+    """Handle FastAPI HTTPException. Single format: { detail, code? }. Missing Bearer -> 401."""
     status_code = getattr(exc, "status_code", status.HTTP_500_INTERNAL_SERVER_ERROR)
-    code = getattr(exc, "code", None)
-    return error_response(status_code, detail_message(exc), code)
+    detail = detail_message(exc)
+    # Starlette HTTPBearer returns 403 when Authorization is missing; treat as 401
+    if status_code == status.HTTP_403_FORBIDDEN and "not authenticated" in detail.lower():
+        status_code = status.HTTP_401_UNAUTHORIZED
+    code = _code_for_status(status_code, exc)
+    return error_response(status_code, detail, code)
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

@@ -91,7 +91,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if len(self._counts[ip]) >= self.max_requests:
             return Response(
-                content='{"detail":"Too many requests","code":"rate_limit_exceeded"}',
+                content='{"detail":"Too many requests","code":"rate_limited"}',
                 status_code=429,
                 media_type="application/json",
             )
