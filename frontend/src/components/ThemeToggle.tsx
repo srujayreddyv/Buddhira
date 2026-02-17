@@ -25,8 +25,6 @@ export default function ThemeToggle() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const current = OPTIONS.find((o) => o.value === theme) ?? OPTIONS[2];
-
   return (
     <div ref={ref} className="relative">
       <button
