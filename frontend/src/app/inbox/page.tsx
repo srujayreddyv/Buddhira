@@ -35,6 +35,7 @@ function InboxContent() {
   const [items, setItems] = useState<Item[]>([]);
   const [tags, setTags] = useState<TagWithCount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
@@ -51,11 +52,13 @@ function InboxContent() {
     if (filterTag) params.set("tag", filterTag);
     if (showArchived) params.set("is_archived", "true");
     const qs = params.toString();
+    setLoadError(null);
     try {
       const data = await apiFetch<Item[]>(`/api/items${qs ? `?${qs}` : ""}`);
-      setItems(data);
-    } catch {
+      setItems(data ?? []);
+    } catch (err) {
       setItems([]);
+      setLoadError(err instanceof Error ? err.message : "Could not load inbox");
     } finally {
       setLoading(false);
     }
@@ -101,11 +104,29 @@ function InboxContent() {
     );
   }
 
-  if (loading && items.length === 0) {
+  if (loading && items.length === 0 && !loadError) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-2">
         <p className="text-sm text-zinc-400">Loading your inbox…</p>
         <p className="text-xs text-zinc-500">First load may take a few seconds if the backend is waking up.</p>
+      </div>
+    );
+  }
+
+  if (loadError && items.length === 0) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 rounded-lg border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/30">
+          <p className="text-sm font-medium text-red-800 dark:text-red-200">Could not load inbox</p>
+          <p className="text-xs text-red-600 dark:text-red-400">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => { setLoadError(null); setLoading(true); fetchItems(); }}
+            className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
