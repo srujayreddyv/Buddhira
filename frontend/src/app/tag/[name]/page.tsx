@@ -132,18 +132,20 @@ export default function TagItemsPage() {
                   </div>
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="flex shrink-0 items-center gap-1 opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
                 <button type="button" onClick={() => quickAction(item.id, { is_pinned: !item.is_pinned })}
+                  aria-label={item.is_pinned ? "Unpin item" : "Pin item"}
                   disabled={actioningId === item.id}
                   title={item.is_pinned ? "Unpin" : "Pin"}
-                  className="rounded p-1.5 hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-800">
-                  {item.is_pinned ? <PinOff className="h-4 w-4 text-amber-500" /> : <Pin className="h-4 w-4 text-amber-400" />}
+                  className="rounded p-1.5 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1 disabled:opacity-50 dark:hover:bg-zinc-800 dark:focus-visible:ring-amber-500">
+                  {item.is_pinned ? <PinOff className="h-4 w-4 text-amber-500 dark:text-amber-300" /> : <Pin className="h-4 w-4 text-amber-400 dark:text-amber-300" />}
                 </button>
                 <button type="button" onClick={() => quickAction(item.id, { is_archived: !item.is_archived })}
+                  aria-label={item.is_archived ? "Unarchive item" : "Archive item"}
                   disabled={actioningId === item.id}
                   title={item.is_archived ? "Unarchive" : "Archive"}
-                  className="rounded p-1.5 hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-800">
-                  {item.is_archived ? <ArchiveRestore className="h-4 w-4 text-orange-500" /> : <Archive className="h-4 w-4 text-orange-400" />}
+                  className="rounded p-1.5 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-1 disabled:opacity-50 dark:hover:bg-zinc-800 dark:focus-visible:ring-orange-500">
+                  {item.is_archived ? <ArchiveRestore className="h-4 w-4 text-orange-500 dark:text-orange-300" /> : <Archive className="h-4 w-4 text-orange-400 dark:text-orange-300" />}
                 </button>
               </div>
             </li>

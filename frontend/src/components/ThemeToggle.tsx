@@ -31,7 +31,7 @@ export default function ThemeToggle() {
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Toggle theme"
-        className="flex items-center justify-center rounded-md border border-zinc-300 p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+        className="flex items-center justify-center rounded-md border border-zinc-300 p-1.5 text-zinc-600 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:focus-visible:ring-sky-500"
       >
         {resolvedTheme === "dark" ? (
           <Moon className="h-4 w-4 text-indigo-400" />

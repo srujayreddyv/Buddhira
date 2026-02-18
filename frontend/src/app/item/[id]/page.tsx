@@ -336,7 +336,12 @@ export default function ItemDetailPage() {
               className="flex items-center gap-1 rounded bg-purple-50 px-2 py-0.5 text-xs text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
               <Tag className="h-3 w-3 text-purple-400" />
               {tag.name}
-              <button type="button" onClick={() => removeTag(tag.id)} className="text-purple-300 hover:text-purple-500 dark:text-purple-500 dark:hover:text-purple-300">
+              <button
+                type="button"
+                aria-label={`Remove tag ${tag.name}`}
+                onClick={() => removeTag(tag.id)}
+                className="rounded p-0.5 text-purple-500 hover:text-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-1 dark:text-purple-300 dark:hover:text-purple-200 dark:focus-visible:ring-purple-500"
+              >
                 <X className="h-3 w-3" />
               </button>
             </span>

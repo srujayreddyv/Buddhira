@@ -19,9 +19,9 @@ Built with **Next.js 16** (frontend), **FastAPI** (backend), and **Supabase** (a
 ### What’s done
 
 - **Backend:** FastAPI + Supabase (service role). Items, tags, item-tags CRUD; search and filter (text, type, state, tag, pinned, archived); JWT via JWKS (ES256); request logging, rate limiting, single error format; health (DB + JWT config); smoke test script.
-- **Frontend:** Next.js App Router; auth (signup, login, reset password); inbox with search/filters, pinned section header, quick actions (pin, archive, activate); new item (note/link/snippet); item detail edit; tags list and tag-scoped items; dark/light/system theme; icons (Lucide); empty states and app icon; 401 → sign out + redirect to login; retry-safe buttons.
+- **Frontend:** Next.js App Router; auth (signup, login, reset password); inbox with search/filters, pinned section header, quick actions (pin, archive, activate); mobile filter drawer + sticky FAB; active filter chips + reset action; list loading skeletons; improved empty states and accessibility on icon controls; new item (note/link/snippet); item detail edit; tags list and tag-scoped items; dark/light/system theme; icons (Lucide); app icon; 401 → sign out + redirect to login; retry-safe buttons.
 - **Security:** CORS, input validation, search sanitization, RLS; no service role in frontend; all queries scoped by `user_id`.
-- **Ops:** Root Makefile (`dev`, `dev-backend`, `dev-frontend`, `prod-backend`, `prod-frontend`, `seed`); env standardized (`.env.example` in both apps); README has local dev, deployment roots, production checklist, pre-deploy smoke checklist, and [What to do next](#what-to-do-next).
+- **Ops:** Root Makefile (`dev`, `dev-backend`, `dev-frontend`, `prod-backend`, `prod-frontend`, `seed`); env standardized (`.env.example` in both apps); GitHub Actions CI release gates (frontend lint, frontend build, backend smoke); README has local dev, deployment roots, production checklist, pre-deploy smoke checklist, and [What to do next](#what-to-do-next).
 
 **Releases:** Tag when ready (e.g. `git tag v1.0.0 && git push origin v1.0.0`).
 
@@ -274,6 +274,22 @@ python smoke_test.py
 
 Verifies: health → auth `/me` → create item → list with search and tag filter.
 
+### 5. CI release gates (GitHub Actions)
+
+Workflow: `.github/workflows/ci.yml`
+
+- **Frontend Lint**: `npm run lint` (frontend)
+- **Frontend Build**: `npm run build` (frontend)
+- **Backend Smoke**: starts backend and runs `python smoke_test.py` (backend)
+
+Required GitHub repo secrets for smoke:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_ANON_KEY`
+- `SMOKE_TEST_EMAIL`
+- `SMOKE_TEST_PASSWORD`
+
 ---
 
 ## Environment Variables
@@ -309,6 +325,7 @@ Backward compatibility is intentional. Confirm these before deployment:
 | Scenario | Fallback behavior |
 |----------|--------------------|
 | **Missing `NEXT_PUBLIC_API_BASE_URL`** | Frontend uses `NEXT_PUBLIC_API_URL` if set, else `""`. So legacy env still works; if both are missing, API calls go to empty base URL (intentional — no hardcoded localhost). Set at least one in production. |
+| **Missing `NEXT_PUBLIC_SUPABASE_URL` or anon key during build** | Frontend `supabaseClient` uses build-safe placeholder values so prerender/CI build does not crash. At runtime, auth will not work correctly until real `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are provided. |
 | **Missing `SUPABASE_JWKS_URL`** | Backend builds JWKS URL from `SUPABASE_URL` + `/auth/v1/.well-known/jwks.json`. Override only if you use a custom auth server. |
 | **Missing `JWT_ISSUER`** | Backend does not pass `issuer` into JWT decode; issuer claim is not validated. Decoding still works (Supabase tokens validate on audience and signature). Set `JWT_ISSUER` only if you need strict issuer check. |
 
