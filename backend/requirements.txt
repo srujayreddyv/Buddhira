@@ -6,3 +6,4 @@ python-dotenv==1.0.1
 pydantic==2.10.3
 pydantic-settings==2.6.1
 PyJWT[crypto]==2.10.1
+sentry-sdk[fastapi]==2.20.0

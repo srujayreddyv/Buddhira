@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # CORS — production must set to your frontend origin(s), e.g. Vercel domain(s)
     cors_origins: str = ""
 
+    # Observability
+    sentry_dsn: str = ""
+
     @property
     def service_role_key(self) -> str:
         return self.supabase_service_role_key or self.supabase_key

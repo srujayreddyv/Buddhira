@@ -55,6 +55,9 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon
         run: npm run build
 
   backend-smoke:
@@ -82,24 +85,44 @@ jobs:
           python-version: "3.12"
 
       - name: Validate required secrets
+        id: secret_check
         run: |
           set -euo pipefail
+          missing=0
           for key in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ANON_KEY SMOKE_TEST_EMAIL SMOKE_TEST_PASSWORD; do
             if [ -z "${!key:-}" ]; then
               echo "Missing required secret: $key"
-              exit 1
+              missing=1
             fi
           done
+          if [ "$missing" -eq 0 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enforce smoke secrets on main
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.secret_check.outputs.ready != 'true' }}
+        run: |
+          echo "Smoke test secrets are required for pushes to main."
+          exit 1
+
+      - name: Skip smoke for missing secrets on PR
+        if: ${{ github.event_name == 'pull_request' && steps.secret_check.outputs.ready != 'true' }}
+        run: echo "Skipping backend smoke on PR because required secrets are not configured."
 
       - name: Install dependencies
+        if: ${{ steps.secret_check.outputs.ready == 'true' }}
         run: pip install -r requirements.txt
 
       - name: Start backend
+        if: ${{ steps.secret_check.outputs.ready == 'true' }}
         run: |
           nohup uvicorn main:app --host 127.0.0.1 --port 8000 >/tmp/buddhira-backend.log 2>&1 &
           echo $! >/tmp/buddhira-backend.pid
 
       - name: Wait for health
+        if: ${{ steps.secret_check.outputs.ready == 'true' }}
         run: |
           set -euo pipefail
           for i in $(seq 1 30); do
@@ -112,6 +135,7 @@ jobs:
           exit 1
 
       - name: Run smoke test
+        if: ${{ steps.secret_check.outputs.ready == 'true' }}
         run: python smoke_test.py
 
       - name: Backend logs on failure

@@ -90,6 +90,7 @@ Optional:
 - `SUPABASE_JWKS_URL`
 - `JWT_AUDIENCE` (default `authenticated`)
 - `JWT_ISSUER`
+- `SENTRY_DSN` (enable backend error monitoring)
 
 ### Frontend (`frontend/.env.local`)
 
@@ -148,6 +149,8 @@ Required GitHub secrets for smoke:
 Behavior:
 - Smoke runs on `push` to `main` and same-repo PRs.
 - Smoke is skipped on fork PRs (secrets unavailable by default).
+- On PRs, smoke is also skipped when required secrets are missing.
+- On `main` pushes, missing smoke secrets fail the pipeline.
 
 ## Deployment Roots
 

@@ -4,6 +4,7 @@ Request logging and rate limiting middleware.
 
 import logging
 import time
+import uuid
 from collections import defaultdict
 from typing import Callable
 
@@ -47,14 +48,18 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         start = time.perf_counter()
+        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+        request.state.request_id = request_id
         user_id = _user_id_from_request(request) or "anon"
         path = request.url.path or ""
         method = request.method or ""
 
         response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
         latency_ms = round((time.perf_counter() - start) * 1000)
         logger.info(
-            "request path=%s method=%s user_id=%s status=%s latency_ms=%s",
+            "request_id=%s path=%s method=%s user_id=%s status=%s latency_ms=%s",
+            request_id,
             path,
             method,
             user_id,

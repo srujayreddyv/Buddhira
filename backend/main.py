@@ -27,6 +27,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger("buddhira")
 
+if settings.sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.starlette import StarletteIntegration
+
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            integrations=[FastApiIntegration(), StarletteIntegration()],
+            traces_sample_rate=0.1,
+            environment=os.environ.get("APP_ENV", "unknown"),
+        )
+        logger.info("Sentry initialized")
+    except Exception:
+        logger.exception("Failed to initialize Sentry")
+
 app = FastAPI(
     title="Buddhira API",
     description="Backend API for Buddhira - powered by FastAPI & Supabase",

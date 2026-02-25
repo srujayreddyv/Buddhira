@@ -31,11 +31,18 @@ def detail_message(exc: Exception) -> str:
     return str(exc) or "An error occurred"
 
 
-def error_response(status_code: int, detail: str, code: str | None = None) -> JSONResponse:
-    """Return JSON in a single format: { detail, code? }."""
+def error_response(
+    status_code: int,
+    detail: str,
+    code: str | None = None,
+    request_id: str | None = None,
+) -> JSONResponse:
+    """Return JSON in a single format: { detail, code?, request_id? }."""
     body: dict = {"detail": detail}
     if code:
         body["code"] = code
+    if request_id:
+        body["request_id"] = request_id
     return JSONResponse(status_code=status_code, content=body)
 
 
@@ -63,15 +70,18 @@ async def http_exception_handler(request: Request, exc: Exception) -> JSONRespon
     if status_code == status.HTTP_403_FORBIDDEN and "not authenticated" in detail.lower():
         status_code = status.HTTP_401_UNAUTHORIZED
     code = _code_for_status(status_code, exc)
-    return error_response(status_code, detail, code)
+    request_id = getattr(getattr(request, "state", None), "request_id", None)
+    return error_response(status_code, detail, code, request_id=request_id)
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handle 422 validation errors in the same format."""
+    request_id = getattr(getattr(request, "state", None), "request_id", None)
     return error_response(
         status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail_message(exc),
         code="validation_error",
+        request_id=request_id,
     )
 
 
@@ -79,8 +89,10 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     """Catch-all so frontend never gets an unexpected shape. Do not leak internal details."""
     import logging
     logging.getLogger("buddhira").exception("Unhandled exception")
+    request_id = getattr(getattr(request, "state", None), "request_id", None)
     return error_response(
         status.HTTP_500_INTERNAL_SERVER_ERROR,
         "An error occurred",
         code="internal_error",
+        request_id=request_id,
     )
